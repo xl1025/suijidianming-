@@ -1,0 +1,2147 @@
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>未来课堂助手 - 智能点名系统</title>
+    <!-- 开启缓存 -->
+    <meta http-equiv="Cache-Control" content="max-age=3600">
+    <meta http-equiv="Pragma" content="cache">
+    <meta http-equiv="Expires" content="3600">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/mammoth@1.4.18/mammoth.browser.min.js"></script>
+    <!-- 引入 Papa Parse 库用于处理 CSV 文件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <!-- 引入 xlsx 库用于处理 XLSX 文件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- 预加载关键资源 -->
+    <link rel="preload" href="https://cdn.tailwindcss.com" as="script">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
+    <link rel="preload" href="https://unpkg.com/mammoth@1.4.18/mammoth.browser.min.js" as="script">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js" as="script">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" as="script">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family="Noto Sans SC", sans-serif; wght@400;500;700&display=swap');
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #020c1b 0%, #0a1a2f 100%);
+            color: #e0e0e0;
+        }
+
+        .cyber-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+        }
+
+        .cyber-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 243, 255, 0.2);
+        }
+
+        .neon-text {
+            text-shadow: 0 0 8px rgba(0, 243, 255, 0.8);
+        }
+
+        .glow-effect {
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+            }
+            to {
+                box-shadow: 0 0 30px rgba(0, 243, 255, 0.8);
+            }
+        }
+
+        .slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .btn-cyber {
+            background: rgba(0, 243, 255, 0.1);
+            border: 2px solid #00f3ff;
+            color: #00f3ff;
+            transition: all 0.3s;
+        }
+
+        .btn-cyber:hover {
+            background: rgba(0, 243, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+        }
+
+        .btn-cyber.active {
+            background: rgba(0, 243, 255, 0.3);
+        }
+
+        #nameDisplay {
+            font-size: 100px;
+            padding: 2rem;
+            line-height: 1.5;
+            border: 2px solid #00f3ff;
+            border-radius: 0.5rem;
+            box-sizing: border-box;
+            min-height: 200px;
+            transition: all 0.3s ease;
+            text-align: center;
+            width: 100%;
+            background: linear-gradient(135deg, rgba(0, 243, 255, 0.1) 0%, rgba(0, 102, 255, 0.1) 100%);
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        @keyframes scaleAndGlow {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 30px rgba(0, 243, 255, 0.8);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+            }
+        }
+
+        .selected-effect {
+            animation: scaleAndGlow 0.5s ease-out;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            z-index: 10;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.05);
+            min-width: 160px;
+            box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 0.375rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .dropdown-content a {
+            color: #e0e0e0;
+            padding: 6px 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dropdown-content a:hover {
+            background-color: rgba(0, 243, 255, 0.1);
+        }
+
+        .title-bounce {
+            animation: bounce 3s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .title-container {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .student-name {
+                font-size: 2rem !important;
+            }
+
+            #nameDisplay {
+                font-size: 2rem;
+                min-height: 8rem;
+            }
+
+            .rollcall-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .cyber-button {
+                width: 100%;
+            }
+            
+            .header-controls {
+                flex-direction: column;
+                gap: 0.5rem !important;
+            }
+            
+            #classSelectDropdown, #sessionSelectDropdown {
+                width: 100% !important;
+            }
+            
+            .header-actions {
+                width: 100%;
+                display: flex;
+                gap: 0.5rem;
+            }
+            
+            #exportButton, #homeButton {
+                width: 50% !important;
+            }
+
+            .header-controls-container {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
+        #nameDisplay:hover {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .rollcall-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .speed-control {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: #e2e8f0;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.8);
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: white;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .export-option {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .export-option:hover {
+            background: rgba(0, 243, 255, 0.1);
+        }
+
+        .export-option i {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+
+        .score-editing-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+
+        .score-editing-title {
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #00f3ff;
+        }
+
+        .confirm-modal {
+            display: none;
+            position: fixed;
+            z-index: 1002;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.8);
+        }
+
+        .confirm-content {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 400px;
+        }
+
+        .confirm-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .confirm-btn {
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .confirm-btn.cancel {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+        }
+
+        .confirm-btn.confirm {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+
+        .session-info {
+            text-align: center;
+            margin: 1rem 0;
+            padding: 0.5rem;
+            background-color: rgba(0, 243, 255, 0.1);
+            border-radius: 0.5rem;
+        }
+
+        .session-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .session-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+
+        .session-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .session-dropdown {
+            min-width: 150px;
+        }
+        
+        .header-controls-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+        
+        .header-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 1rem;
+        }
+        
+        #exportButton {
+            white-space: nowrap;
+        }
+        
+        #sessionSelectDropdown {
+            width: auto;
+        }
+        
+        .session-selection {
+            margin: 1rem 0;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 5px;
+            padding: 0.5rem;
+        }
+        
+        .session-checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 0.3rem 0;
+        }
+        
+        .session-checkbox-item input {
+            margin-right: 0.5rem;
+        }
+        
+        .select-all-sessions {
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+        }
+
+        .history-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .history-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 243, 255, 0.1);
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .history-student {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #00f3ff;
+        }
+        
+        .history-time {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        
+        .history-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #ddd;
+        }
+
+        .score-stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .score-stat-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 243, 255, 0.1);
+        }
+        
+        .score-stat-name {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .score-stat-value {
+            font-size: 1.5rem;
+            color: #00f3ff;
+            margin-bottom: 0.5rem;
+        }
+        
+        .score-stat-controls {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .score-stat-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: 1px solid #00f3ff;
+            color: #00f3ff;
+            cursor: pointer;
+        }
+        
+        .score-stat-btn:hover {
+            background: rgba(0, 243, 255, 0.2);
+        }
+
+        .class-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin: 1rem 0;
+        }
+        
+        .class-nav-btn {
+            padding: 0.5rem 1rem;
+        }
+
+        .dropdown.active .dropdown-content {
+            display: block;
+        }
+
+        .filter-btn.active {
+            background: rgba(0, 243, 255, 0.3);
+        }
+        
+        .rollcall-pool-status {
+            text-align: center;
+            margin: 1rem 0;
+            padding: 0.5rem;
+            background-color: rgba(0, 243, 255, 0.1);
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        #resetRollcallPoolBtn {
+            margin-left: 1rem;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.8rem;
+        }
+        
+        .edit-btn {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        @keyframes flash {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(0.95); }
+        }
+
+        .name-flash {
+            animation: flash 0.3s linear infinite;
+        }
+
+        @keyframes rapidScroll {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-100%); }
+        }
+
+        .rapid-scroll {
+            animation: rapidScroll 0.05s linear infinite;
+        }
+
+        @keyframes roll {
+            0% { transform: translateX(0); opacity: 0.8; }
+            50% { transform: translateX(2px); opacity: 1; }
+            100% { transform: translateX(0); opacity: 0.8; }
+        }
+
+        .rolling-effect {
+            animation: roll 0.1s ease-in-out infinite;
+            transition: all 0.05s;
+        }
+
+        .selected-effect {
+            animation: highlight 0.5s ease-in-out;
+        }
+
+        @keyframes highlight {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); box-shadow: 0 0 15px rgba(72, 187, 120, 0.5); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes syncPulse {
+            0% {
+                background-color: rgba(0, 243, 255, 0.1);
+                transform: scale(1);
+            }
+            50% {
+                background-color: rgba(0, 243, 255, 0.3);
+                transform: scale(1.02);
+            }
+            100% {
+                background-color: rgba(0, 243, 255, 0.1);
+                transform: scale(1);
+            }
+        }
+
+        .sync-highlight {
+            animation: syncPulse 1s ease-in-out;
+        }
+
+        .pool-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-left: 8px;
+        }
+        
+        .pool-good {
+            background-color: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+        }
+        
+        .pool-warning {
+            background-color: rgba(255, 255, 0, 0.2);
+            color: #ffff00;
+        }
+        
+        .pool-danger {
+            background-color: rgba(255, 0, 0, 0.2);
+            color: #ff0000;
+        }
+
+/* 添加下拉菜单分组样式 */
+.dropdown-group-header {
+    padding: 0.5rem 1rem;
+    color: #9ca3af;
+    font-weight: bold;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    pointer-events: none;
+}
+
+.dropdown-item {
+    padding: 0.5rem 1.5rem;
+    color: #e5e7eb;
+    display: block;
+    transition: all 0.2s;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(0, 243, 255, 0.1);
+    color: #00f3ff;
+}
+
+/* 修复下拉菜单z-index问题 */
+.dropdown {
+    position: relative;
+    z-index: 50;
+}
+
+.dropdown-content {
+    z-index: 50;
+}
+
+    </style>
+</head>
+
+<body class="min-h-screen py-8 px-4 sm:px-8 relative">
+    <div class="header-controls-container">
+        <div class="header-controls">
+            <div class="dropdown" id="classSelectDropdown">
+                <button class="btn-cyber rounded-lg py-3 px-4 cursor-pointer appearance-none flex items-center gap-2" id="classSelectBtn">
+                    护理1班
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+                <div class="dropdown-content" id="classDropdownContent">
+                </div>
+            </div>
+            
+            <div class="dropdown" id="sessionSelectDropdown">
+                <button class="btn-cyber rounded-lg py-3 px-4 cursor-pointer appearance-none flex items-center gap-2" id="sessionSelectBtn">
+                    第1节课
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+                <div class="dropdown-content" id="sessionDropdownContent">
+                </div>
+            </div>
+            
+            <button id="createNewSessionBtn" class="btn-cyber rounded-lg py-3 px-4 font-medium bg-green-900/30 border-green-500 text-green-400">
+                <i class="fas fa-plus mr-1"></i>新增节次
+            </button>
+        </div>
+        
+        <div class="header-actions">
+            <button id="homeButton" class="btn-cyber rounded-lg py-3 px-4 font-medium">
+                <i class="fas fa-home mr-2"></i>返回主页
+            </button>
+            <button id="exportButton" class="btn-cyber rounded-lg py-3 px-4 font-medium">
+                <i class="fas fa-download mr-2"></i>导出数据
+            </button>
+        </div>
+    </div>
+
+    <div class="session-info cyber-card rounded-xl p-4">
+        <h3 class="text-xl font-bold mb-2 text-[#00f3ff]">当前节次信息</h3>
+        <div id="sessionDateTime" class="mt-2 text-sm text-gray-300">
+            日期：<span id="currentDate"></span> 时间：<span id="currentTime"></span> 节次：<span id="currentSession"></span>
+        </div>
+    </div>
+
+    <div class="title-container">
+        <h1 class="text-[4.5rem] sm:text-[6rem] font-bold mb-4 neon-text text-[#00f3ff] title-bounce">课堂助手</h1>
+        <p class="text-xl text-gray-300">智能点名与课堂互动系统</p>
+    </div>
+    <div class="max-w-4xl mx-auto">
+        <div id="nameDisplay" class="glow-effect rounded-lg border-2 border-[#00f3ff] text-3xl sm:text-4xl font-bold p-6 mb-8 w-full" style="white-space: pre-wrap;">
+            准备就绪
+        </div>
+        
+        <!-- 点名池状态指示器 -->
+        <div class="rollcall-pool-status" id="rollcallPoolStatus">
+            点名池状态: 
+            <span id="poolCountDisplay">所有学生都可被选中</span> 
+            <button id="resetRollcallPoolBtn" class="btn-cyber rounded px-2 py-1 text-sm">重置点名池</button>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-ccols-4 gap-4 mb-8">
+            <select id="rollcallCountSelect" class="btn-cyber rounded-lg py-3 px-4 cursor-pointer appearance-none">
+                <option value="1">单人模式</option>
+                <option value="2">双人模式</option>
+                <option value="3">三人模式</option>
+            </select>
+
+            <button id="actionBtn" class="btn-cyber rounded-lg py-3 px-4 font-medium">
+                <i class="fas fa-rocket mr-2"></i>开始提问
+            </button>
+
+            <button id="addScoreBtn" class="btn-cyber rounded-lg py-3 px-4 font-medium">
+                <i class="fas fa-star mr-2"></i>点击加一分
+            </button>
+
+            <div class="relative">
+                <input type="file" id="fileInput" class="hidden" accept=".txt,.docx,.csv,.xlsx">
+                <button onclick="document.getElementById('fileInput').click()" class="btn-cyber rounded-lg py-3 px-4 font-medium w-full">
+                    <i class="fas fa-file-upload mr-2"></i>名单上传
+                </button>
+            </div>
+        </div>
+        
+        <!-- 音色选择下拉菜单 -->
+        <div class="relative inline-block w-full mb-8">
+            <select id="voiceSelect" class="btn-cyber rounded-lg py-3 px-4 cursor-pointer appearance-none w-full">
+                <!-- 默认音色选项 -->
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                <i class="fas fa-chevron-down text-sm"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="cyber-card rounded-xl p-6">
+        <h3 class="text-xl font-bold mb-4 text-[#00f3ff] flex items-center">
+            <i class="fas fa-chart-line mr-3"></i>学分统计
+        </h3>
+        <div id="scoreBoard" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            <div class="text-center py-2 px-4 bg-gray-800 rounded-lg">
+                <p class="font-medium">暂无加分记录</p>
+                <p class="text-sm text-gray-400">请先进行加分操作</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="cyber-card rounded-xl p-6">
+        <h3 class="text-xl font-bold mb-4 text-[#00f3ff] flex items-center">
+            <i class="fas fa-microphone-alt mr-3"></i>语音控制
+        </h3>
+        <button id="voiceToggle" class="btn-cyber rounded-lg py-2 px-4 font-medium mb-4">
+            <i class="fas fa-volume-up mr-2"></i>语音播报
+        </button>
+        <p class="text-gray-300">启用语音功能后，系统将自动播报点名结果和加分情况。</p>
+    </div>
+
+    <div class="cyber-card rounded-xl p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold text-[#00f3ff] flex items-center">
+            <i class="fas fa-history mr-3"></i>点名历史
+        </h3>
+        <button id="clearHistoryBtn" class="btn-cyber rounded-lg py-1 px-3 text-sm font-medium bg-red-900/30 border-red-500 text-red-400">
+            <i class="fas fa-trash-alt mr-1"></i>清空历史
+        </button>
+    </div>
+    <div id="historyList">
+        <p class="text-slate-500 text-center">暂无点名历史</p>
+    </div>
+</div>
+
+<div id="clearHistoryModal" class="confirm-modal">
+    <div class="confirm-content">
+        <h2 class="text-xl font-bold mb-4 text-[#00f3ff]">确认清空</h2>
+        <p>确定要清空所有点名历史记录吗？此操作不可恢复。</p>
+        <div class="confirm-buttons">
+            <button id="cancelClearBtn" class="confirm-btn cancel">取消</button>
+            <button id="confirmClearBtn" class="confirm-btn confirm">确认清空</button>
+        </div>
+    </div>
+</div>
+
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <span class="close">×</span>
+            <h2 class="text-2xl font-bold mb-6 text-[#00f3ff]">导出数据</h2>
+            
+            <div class="form-group">
+                <label for="exportTypeSelect">导出类型</label>
+                <select id="exportTypeSelect" class="form-control">
+                    <option value="scores">学分数据</option>
+                    <option value="attendance">出勤记录</option>
+                    <option value="total_statistics">学分和出勤汇总数据</option>
+                    <option value="all">全部数据</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>选择节次 (可多选)</label>
+                <div class="select-all-sessions">
+                    <label class="session-checkbox-item">
+                        <input type="checkbox" id="selectAllSessions"> 全选
+                    </label>
+                </div>
+                <div class="session-selection" id="exportSessionSelection">
+                </div>
+            </div>
+            
+            <button id="confirmExportBtn" class="btn-cyber rounded-lg py-2 px-4 font-medium">
+                <i class="fas fa-check mr-2"></i>确认导出
+            </button>
+        </div>
+    </div>
+
+    <div id="exportSuccessModal" class="modal">
+        <div class="modal-content">
+            <span class="close">×</span>
+            <h2 class="text-2xl font-bold mb-6 text-[#00f3ff]">导出成功</h2>
+            <p>数据已成功导出为Excel文件。</p>
+            <button id="closeSuccessModal" class="btn-cyber rounded-lg py-2 px-4 font-medium mt-4">
+                <i class="fas fa-check mr-2"></i>确定
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        // 存储应用数据的主对象
+        const appData = {
+            currentClass: '护理1班',
+            currentSession: '第1节课',
+            classes: {},
+            voiceEnabled: true,
+            selectedVoice: null,
+            availableVoices: [],
+            rollcallPool: [],
+            isRolling: false,
+            rollInterval: null
+        };
+
+        // 班级列表
+        const allClassNames = [
+            '护理1班', '护理2班', '护理3班', '护理4班', '护理5班', 
+            '护理6班', '护理7班', '护理8班', '护理9班', '护理10班', '护理11班',
+            '中康1班', '中康2班', '中康3班',
+            '检验班', '康复班', '药剂班', '中药班', '中护班', '影像班'
+        ];
+
+        // 预定义学生名单
+        const predefinedStudents = {
+            "护理1班": [
+                "杨文静", "付艺霏", "张子一", "史雨祺", "王怡诺", "钱莹颖", "程家祺", "乔璐晴", "张诗涵", 
+                "郑凤羽", "王嘉欣", "孙熙钡", "柳紫怡", "柴艺瑞", "陈紫妍", "马梦帆", "赵思彤", "刘桉毓", 
+                "余钇佳", "刘立鑫", "韩晓曦", "刘盈", "苑佳雯", "朱雨欣", "景钰琼", "姚申霄", "左露怡", 
+                "朱静怡", "李笑美", "李俊晓", "王怡婷", "陈韵琳", "黄雅婷", "周嘉琪", "王译涵", "孙奥玥", 
+                "朱璐", "姜蕙", "杨蕊同", "孟思琪", "李梓瑞", "朱倩影", "代珍琦", "刘雨涵", "王佳音", 
+                "李仕琪", "刘奥雯", "王呈洁", "李梦焱", "梁圣钰", "师贻珊", "孟鑫媛", "石韶涵", "张欣茹", 
+                "靳雅琪", "吕紫煊", "沈俊延", "姚博瑞", "马佳琦", "裴致冉", "王子龙", "潘基文", "李煜翔", 
+                "李镇旭", "荆运豪", "刘锦池", "朱浩然", "池家明", "刘子翔", "梁润泽", "李文宇", "李硕", 
+                "程世菁", "韩京奥", "程胤恺", "刘恒硕", "李晨阳", "王奇凡", "毕雨帆", "刘亚玮", "赵显祝", 
+                "武钊宇", "顾成成", "赵校毅", "房子钧", "苏天歌"
+            ],
+            "护理2班": [
+                "李怡莹", "董聪颖", "杨金玉", "喻飞扬", "姚依依", "李怡洋", "张艺婷", "王子诺", "王茹茵", 
+                "郭任伊", "王一杰", "陈晓慧", "苑思阳", "刘欣雅", "樊星月", "袁铄逸", "董家琪", "马铭昕媛", 
+                "马鑫冉", "王荣", "李林筱", "王馨瑶", "李雅彤", "李晶", "孙雨萌", "杜梓淇", "陈紫怡", "吴梦晗", 
+                "刘铠睿", "白宇菲", "赵新雨", "付潇雅", "赵桂新", "方偌茜", "唐诗", "闫永仪", "张怡爽", "邬嘉黎", 
+                "刘奕轩", "杨焕培", "李一冉", "胡雨婷", "于宇涵", "朱铭琳", "赵紫帆", "张凯娜", "王诗雅", 
+                "刘雯斐", "张鑫冉", "岳君荧", "程诺", "邹怡馨", "高梓涵", "王乐琪", "张雅茹", "余静涵", 
+                "杨紫畅", "李愫", "王福雅", "史密源", "赵钰博", "刘甲豪", "江垂航", "祁思程", "许飞", "赵耘宽", 
+                "张聪硕", "王跃华", "张渲明", "王浩涵", "唐志远", "吴瑞杰", "时垲金", "邵昱喆", "栗双庆", 
+                "穆浩然", "祝欣辰", "张宇坤", "陈瑞霖", "李沐辰", "李奥翔", "韩欣颖", "赵毓芳", "胡韩月", 
+                "张文博", "卢炳昊"
+            ],
+            "护理3班": [
+                '张艺', '宋佳怡', '雷紫函', '李可馨', '王梦涵', '闫思蓓', '张钰潇', '徐雨薇', '李雨霏', '陈欣可',
+                '周鑫蕊', '陈梦瑶', '吕品垚', '罗秋寒', '周雨馨', '李依琳', '宋于佳', '李永鑫', '卢思含', '张月婵',
+                '徐梦媛', '付盼盼', '赵静艺', '李思语', '贾祥梓', '高嘉悦', '司翔钰', '唐紫嫣', '史晨晨', '葛笑曼',
+                '王以嘉', '祁露莹', '吴嘉悦', '杨雅琳', '李欣然', '张紫璐', '王雅忻', '王畅', '丁曼', '王可心',
+                '董纯钰', '王一涵', '廉惜', '刘新雨', '张艺喆', '周珂鑫', '周怡晨', '王雪彤', '张梓潼', '姚超杰',
+                '李铭涵', '杨淏然', '李祺耀', '郎超杰', '阎家豪', '张奥杰', '鲁奥鑫', '于孟达', '郭恒硕', '刘炎林',
+                '刘晨阳', '张傲博', '汪子飞', '郝世博', '曲江涵', '孟王旭', '张泽楷', '丁嘉轩', '师昱', '刘欣毅',
+                '薛亚飞', '陈福涵', '张嘉一', '陈佳希', '杨泽威', '郭闻赫', '马奥磊', '殷安安', '张子航', '叶梓天',
+                '吉赛飞', '原泽宇', '张子豪', '张兴国', '苏之航', '孔粤慧', '娄艺轩', '丁雅晨', '郝籽朝'
+            ],
+            "护理4班": [
+                '马卫蝶', '许琦悦', '王世宇', '王艺泽', '陈雨涵', '李荣歆', '余彦彦', '薛理想', '金世祺', '王莉萍',
+                '付添锦', '邱新瑞', '周昕月', '陈可馨', '王佳韵', '崔书琴', '关思雨', '王凯瑞', '李佩娣', '赵骄娇',
+                '李春阁', '何晨露', '王子涵', '毕郑媛', '熊紫琪', '张馨冉', '王婧涵', '于段蕾', '朱璐漪', '阎艺阳',
+                '杨锦熙', '张子怡', '张悦', '朱丽倩', '赵静雯', '屈琳寒', '李怡炫', '左家瑞', '韦瑞', '王靖贻',
+                '郭馨怡', '余悦', '孙艳文', '刘敏', '王千', '姚梦桐', '王舒涵', '遆乾程', '杜传宇', '赵定州',
+                '王旋乐', '郭奕辰', '张雨辰', '杜家星', '赵毅', '魏嘉辉', '王梓源', '陈安琪', '耿宏杰', '郭陆凯',
+                '李豪', '周颜康', '栗欣乐', '马松', '潘志祥', '席天宇', '魏奥彬', '钟炜淏', '王可选', '杨森',
+                '孙楷', '刘世博', '赵阳', '王晗旭', '刘世博', '孟书源', '张文浩', '刘泽楷', '王宝海', '赵子航',
+                '张雨微', '刘笑彤', '王思涵', '赵崇志', '王世威', '孟令书', '刘梦宇', '孟琪', '李好乐'
+            ],
+            "护理5班": [
+    "张若怡", "祝嘉若", "徐悦", "刘文静", "晁欣怡", "门梦雅", "楚惠然", "李思彤", "王家楠", "曹芷涵",
+    "付金阳", "张琼瑶", "张琳晨", "黄诗云", "韩雨蒙", "刘依菲", "崔子琳", "冯依婷", "明雨涵", "张智敏",
+    "董若菲", "蒋雨欣", "王诗颖", "王若菡", "王晶", "金晓彤", "徐语含", "朱婧雯", "常燕清", "徐紫涵",
+    "张瑞希", "魏佳鑫", "王艺冉", "齐雨馨", "卢稳晴", "赵梓悦", "姚宜彤", "曹梦溪", "肖锦茹", "王梦茹",
+    "赵墨晗", "王子彤", "陈紫萱", "张欣悦", "张慧萍", "王奕玺", "杨鑫悦", "程露曼", "马一冉", "蒋安琪",
+    "柳诗涵", "金韩莉", "孔令雪", "李静佳", "曹诗悦", "洪悦悦", "吴欣怡", "潘静", "张士函", "刘文笑",
+    "韩林慧", "魏雨全", "李科爽", "李锐", "李斌斌", "钱镱锐", "支奥杰", "江卓", "代家康", "吴家欢",
+    "白腾宇", "肖竣哲", "边耀", "张远征", "刘滨瑞", "李家瑞", "李佳轩", "郭金龙", "杨自豪", "郭子豪",
+    "牛奥佳", "牛贺嘉", "徐嘉豪", "宁鹏博", "丁羿翔", "史浩成", "李金泽", "陈海瑞", "张青舒", "何星",
+    "汪雨奇", "陈金玉", "苏晓航"
+], 
+            "护理6班": [
+                '李佳贤', '何新宇', '崔昊', '王文博', '刘栩麟', '刘俊冶', '栗浩雯', '梅耀星', '卢奥翔', '卢天宇',
+                '李家佟', '马玉龙', '孙晓剑', '王逸臣', '陈炳旭', '郭志高', '何路炀', '计永康', '安子辰', '郭志豪',
+                '刘子庆', '牛佳琪', '马子谦', '刘桐延', '秦晨曦', '张然柯', '宋润熙', '张昊', '祁晨博', '张丰帆',
+                '赵梓博', '赵钰清', '贾子朋', '张凯航', '赵子源', '王灿灿', '王艺轩', '王小戈', '汪红利', '王怡梦',
+                '阴照彤', '杨依轩', '郭佳琪', '朱冰', '张静雨', '陈姿汝', '谢梦莹', '张可欣', '赵珂莹', '郭紫涵',
+                '夏子涵', '马欣怡', '曹琳', '张如涵', '孙冬梅', '关潇滢', '张诗晴', '徐晚晴', '李易萌', '张甜',
+                '卫嘉欣', '左冰怡', '马丽雅', '李誉佳', '焦子晴', '姚懿宸', '吴思颖', '杨怡静', '王梓源', '王硕妍',
+                '周娇', '吕倩茹', '郭书嘉', '李紫娴', '钟晨喜', '马雪姚', '代怡甜', '周静文', '王洢槚'
+            ],
+            "护理7班": [
+                '张家豪', '孟镇华', '韩子浩', '侯佳浩', '王嘉然', '方笑言', '王市龙', '史永鑫', '张廷煜', '靳奥赢',
+                '于远洋', '李宇隆', '许搏晨', '宋子鸣', '杜栋志', '苗栋奕', '王林锐', '李志涵', '张锦奥', '孙煜亭',
+                '施辰宇', '董瑞', '张皓恺', '王柄钦', '乔已碁', '胡子贤', '刘瑞博', '张舒平', '邢媛晴', '董颖',
+                '徐煜涵', '王悦', '王一鸣', '马露莹', '徐苗苗', '全攸攸', '穆家乐', '焦姝涵', '房雅倩', '王艺璇',
+                '宋孟儒', '曹诗雨', '吕欣然', '杜飒飒', '魏优璇', '和紫依', '于聪聪', '郭玲溢', '高嘉婧', '赵俊丽',
+                '赵子玉', '仲妍菲', '李子萱', '程嘉欣', '高艺', '黄依然', '范鑫瞳', '李依晨', '李嘉祎', '孙雨阳',
+                '余沛樾', '王盼', '刘紫萱', '桂小佳', '张静轩', '周墨儿', '崔思语', '周筱涵', '刘艺博', '赵子路'
+            ],
+            "护理8班": [
+                '王如心', '赵奕瑄', '陈炫月', '李若楠', '张家慧', '张如萱', '蒋轲欣', '秦歌', '朱冰雨', '朱肖颖',
+                '况欣怡', '宋欣妍', '金美心', '鲍旭优', '李晶晶', '戚子娟', '李悠然', '殷雨婷', '张烁', '田益瑄',
+                '朱晨曦', '岳江婷', '孔梓尧', '尚潇晴', '宋慧琳', '姚珺', '方雨彤', '刘畅', '李梓菲', '王思佳',
+                '王清歌', '吴俊娴', '刘沣慧', '刘玥彤', '唐子璇', '申蕴慈', '郭梦依', '徐佳', '宋含笑', '张蔓林',
+                '强晓雨', '彭书杭', '湛腾森', '李金浩', '赵雪松', '夏凯豪', '武起航', '李军衡', '刘京乔', '荆赛风',
+                '王明', '丁一航', '王志卓', '姚怡涵', '毕然', '王宁', '万林峰', '刘铭扬', '张恩泽', '王镡冉',
+                '朱超卓', '孙雨泽', '王铭锐', '蒋元琦', '胡廷涛', '靳洪基', '罗梦茹'
+            ],
+            "护理9班": [
+                '梁梦恩', '谷奇航', '王韵涵', '冯建林', '常雨晨', '张志豪', '孟郡瑜', '李子翔', '何浩然', '张福旺',
+                '孙一铭', '乔嘉上', '张贵畅', '张毅恒', '刘家兴', '李智超', '丁浩天', '司子懿', '王辰宇', '鲁沛言',
+                '刘海乐', '王天意', '李雨航', '李松洋', '李世博', '丁波清', '刘志豪', '王昱程', '王泽一凡', '梁鹤',
+                '牛奥美', '李怡霖', '陈子怡', '徐泽敏', '张悦', '张瑶瑶', '陈奥舒', '张雨洁', '田晨菲', '王一菲',
+                '何蒙晗', '陈依果', '周灿', '王妍', '朱欣冉', '苗婵娟', '陈嘉欣', '刘晓聪', '余静茹', '刘晓颖',
+                '韩艺冉', '董佳琪', '张韶涵', '闫畅', '张晨姝', '温鑫茹', '王文涵', '郭怡姿', '郑欣宜', '丁新新',
+                '姜建孜', '张媛媛', '汪梓舒', '仲珂媛', '翟煜菡', '邵悦鑫', '张思淇', '郭笑雨', '郝明霞', '克一诺',
+                '赵一鸣', '张笑', '刘欣瑶', '王雨轩'
+            ],
+            "护理10班": [
+                '张雅怡', '裴雅若', '李淇媛', '李佳平', '李冰欣', '闫子涵', '刘苏菲', '芦婧珂', '陈文静', '王尚淑',
+                '王梦涵', '秦晴', '杨子怡', '李灿', '左宜佳', '朱欣怡', '廉愉涵', '刘家希', '刘阳阳', '王诗萌',
+                '刘奥运', '赵珂晗', '巩锦钰', '刘嘉佳', '闵晨语', '赵雨萱', '邵开馨', '王誉婷', '王秋杰', '尚子涵',
+                '周傲雪', '朱彤彤', '刘文博', '张烁潼', '曹从从', '张晓诺', '张子涵', '黄梦涵', '刘奕诺', '李汶颖',
+                '王诗涵', '张冉冉', '宋诗嫣', '谭力玮', '王硕', '张家豪', '安润翔', '孙慧霖', '刘家铭', '郭濮铭',
+                '洪彦戍', '翟文硕', '王浩森', '刘智翔', '冉康豪', '孙恒毅', '李子强', '王琦铭', '王子瑜', '孙振宇',
+                '吕松洋', '王筱涵', '王泓森', '梁晋嘉', '王如飞', '陈思博', '侯予卿', '李敬轩'
+            ],
+            "护理11班": [
+                '苏钰', '亢浩轩', '任宇翔', '王子', '乔新奥', '王国敬', '张益豪', '李雨茁', '陈子贺', '高鑫奥',
+                '薛振鑫', '浮鑫曦', '邵铭泽', '王云锴', '刘茂涵', '任浩彬', '郭再豪', '白丁硕', '杨静航', '苗圃',
+                '卢星宇', '孟书剑', '雷锦奥', '丁子尧', '高翔', '徐梓淞', '佟康博', '王翔', '渠恩泽', '梁国梁',
+                '梁梦奕', '李柯霖', '李丁', '贾一菲', '贾梦婕', '武靖雯', '贺佳琪', '张佳乐', '林子淳', '王婉婷',
+                '孙佳琳', '樊可欣', '刘鑫', '王委雪', '刘星一', '邢凯莹', '郭雅琳', '张欣奕', '苏悦', '赵紫莹',
+                '漫紫涵', '王语倩', '刘文雅', '耿玉烁', '李煜笛', '周明珠', '李子怡', '高璐瑶', '李文悦', '黄婉橙',
+                '张宇飞', '王青晗', '高杭', '刘子涵', '王欣怡', '陈奕梦', '赵檀雅', '陈丽洁'
+            ],
+            "检验班": [
+                '丁嘉扬', '鲁浩冉', '赵若钦', '黄柯豪', '孟子涵', '杨开运', '王楚惟', '吴东泽', '马鸣远', '李昊翰',
+                '马乐瑶', '段奕辰', '任帅旗', '杨强', '张天旭', '王圣君', '李怡含', '郭静怡', '陈思雨', '刘思琪',
+                '王瑞涛', '刘如月', '王玉迪', '张子喆', '孙安琪', '高若渲', '李静怡', '郑倩', '王辛悦', '务雨硕',
+                '马梓涵', '袁紫瑜', '范奥欣', '王婷', '李蕙汎', '舒智慧', '柳怡涵', '杨若曦', '陈滢', '张笑笑',
+                '张奥雨', '王纪颖', '王艺琪', '吴欣欣', '张媛媛', '崔舒涵', '魏雨彤', '刘宜然'
+            ],
+            "康复班": [
+                '李圣元', '田倍嘉', '宋文硕', '董宇豪', '张淙贺', '贺仕翰', '杨凌枫', '崔家豪', '闫政权', '黄亿',
+                '张傲轩', '刘家旭', '周信丞', '陈炳旭', '杨鑫蕊', '高俊杰', '刘鑫鹏', '姜树阳', '闫宽沣', '吴晨铭',
+                '高士雄', '杨泽群', '魏浩远', '刘浩然', '卫睿泽', '李栋', '李明轩', '赵鑫甜', '杜美玉', '刘莞茹',
+                '许清清', '张媛馨', '张怡茹', '曹可欣', '张祎娴', '张祎姝', '景琳淇', '刘子涵', '马静文'
+            ],
+            "药剂班": [
+                '王凯想', '王奕斐', '刘一慧', '杨晓敏', '周州', '汤丽娟', '秦梓涵', '耿佳辉', '赵泽疆', '李彦燊',
+                '金隆源', '袁文帅', '郭震欣', '包艺明', '刘博文', '张飞扬', '彭坚', '刘翔', '李熙来', '董家瑜',
+                '申奥琪', '周寒硕', '黄梓轩', '曹雅博', '申一楠', '刘子瑜', '杨一', '张晴晴', '张欣雨', '李丹阳',
+                '王一帆', '王艺帆', '温一博', '李俊怡', '徐佳欣', '杨雨欣', '田文静', '马煜茹', '樊文钰', '张佳怡',
+                '于今越', '蒋怡泽', '刘燕枝', '王孜怡', '李京奥', '薛铭举', '李辰夕', '宋校奇', '杨梦娟', '赵演艺',
+                '郭欣瑜', '吕昊骏', '卫泽轩', '张珑琦', '杨紫涵', '张璐'
+            ],
+            "中药班": [
+                '方圆圆', '杜莉雅', '赵佳宜', '许静宇', '崔欣怡', '牛静雯', '吕佳怡', '常诗涵', '李正颖', '陈艺涵',
+                '李梓馨', '张桂阁', '陈姿', '罗西尧', '王笑茹', '尚春佳', '张晓雨', '李佳柯', '王一帆', '苏换君',
+                '付涵宇', '朱新雨', '袁少鸽', '张煜轩', '唐紫轩', '王艺迪', '孙晨哲', '乔劲霖', '张哲', '王烨硕',
+                '李铭泽', '霍尧中', '霍政含', '张宇轩', '王腾飞', '王东旭', '刘景泰', '贾楚琦', '王庆权', '杨骏浩',
+                '马松泽', '王梓涵', '牛林阳', '朱慧昊', '包人杰', '豆文康', '翟珑皓', '耿栋泽', '王一博', '闫昊',
+                '陈柘同', '金子昀', '魏则宇', '宋佳诺', '李旭桢', '李世昂', '李福音', '郑浩'
+            ],
+            "中护班": [
+                '张焱', '张奥冬', '武佳航', '曹宇轩', '庞江坤', '郭孟阳', '孙永蓝', '李浩琦', '李浩然', '袁俊煜',
+                '马浩天', '韩中元', '田博煜', '黄望远', '沈志达', '王震', '程俊豪', '李禹轩', '袁奥翔', '孟繁盛',
+                '余子铭', '任紫美惠', '钱硕', '张玙璠', '张思寒', '张雨函', '王馨瑶', '殷诗雅', '刘亦纯', '桑乐乐',
+                '计家文', '丁一晗', '张欣然', '巩政君', '张欣怡', '朱怡萱', '姚园园', '徐灿', '刘千玉', '张罂允',
+                '赵铭萱', '李昱羲', '谢雨彤', '郜锦瑶', '邓若涵', '尤怡佳', '牛怡霖', '王美淋', '苏芮熙', '胡格',
+                '韩舒琪', '韩佳燚', '谢函颖', '王鑫钰', '和怡汝', '冀姿涵', '王佳瑶', '吴若雅', '孙晨嘉', '王一彤',
+                '焦琬雅', '梁可依', '黄悦函', '连欣艺', '田穗穗', '陈甜宇', '刘子绮', '朱可欣', '王政羽', '王苏豫',
+                '刘清颜', '宋晨阳', '宋萱倪', '韩若熙', '左怡婷', '范炎彬', '彭祎璠', '郭雅琦', '马嘉悦', '陈茜茜',
+                '华婉君', '郭佳灵', '陈建'
+            ],
+            "中康1班": [
+                '曹悦', '崔馨月', '崔莹莹', '丁柯薇', '董耀予', '谷慧茹', '韩泞泽', '黄怡染', '贾宁可', '蒋硕',
+                '李笑', '李昱菲', '李子晗', '刘飞扬', '刘檑淼', '刘爽', '刘芷菡', '马媤琪', '毛嘉琦', '齐聪瑛',
+                '宋丽冉', '宋美琳', '唐晓诗', '王智楠', '殷鹤闻', '张赫哲', '张籽诺', '郑子涵', '曾政', '陈万青',
+                '樊议泽', '高偲陌', '郭鑫城', '郭一霖', '郭政融', '胡雨龙', '霍浩然', '姬蜀航', '冀世闯', '贾广杰',
+                '寇淏宾', '李奥', '李奥宇', '李晨硕', '李梦琦', '李匹克', '李颖博', '刘绍聪', '刘舜', '刘晓航',
+                '刘耀东', '刘盈满', '吕一鸣', '秦名泽', '任博锐', '尚金卓', '沈新佩', '王禾轩', '王宏举', '王纪森',
+                '王珂磊', '王礼豪', '王礼硕', '王晴光', '王翔宇', '王怡穗', '王义翔', '王子福', '席英超', '阎文鹏',
+                '杨凯文', '杨宗睿', '姚天宇', '余欣', '张君杰', '张钱', '张旭坤', '张子瑞', '邹一阳', '谷欣颖'
+            ],
+            "中康2班": [
+                '李帅坪', '徐珍珠', '卢蕊馨', '梁灿灿', '欧紫彤', '李静', '董紫萱', '张艺严', '张欣源', '王弈丹',
+                '戚笑含', '李高静', '孙青曼', '杨凯悦', '王穗穗', '董星岩', '武雯倩', '李宇菲', '徐豪丽', '张箫丹',
+                '郑珂心', '金佳明', '赵宏允', '李铭硕', '任诚浩', '高偲淇', '周珺熙', '牛嘉兴', '刘浩帆', '杨涵奇',
+                '陈家兴', '李栋霖', '金泽轩', '阙辰', '崔玉斌', '赵志豪', '马周毅', '王华哲', '徐沛东', '何子轩',
+                '高一增', '高亦然', '肖叶奥', '李一帆', '张家辉', '田尚博', '李文奥', '孙旭博', '袁帅刚', '李光洁',
+                '李林析', '陈昊天', '许志豪', '于志嘉', '王庆磊', '邵帅', '丁子航', '张昊', '卢俊宇', '鲁恒硕',
+                '王铭铄', '孙承瑞'
+            ],
+            "中康3班": [
+                '李紫菡', '耿思雨', '李逸娜', '张露雪', '王雅涵', '汪焕淇', '袁雨菡', '荆雅琪', '王莱', '王诗琪',
+                '魏骊霖', '任豪辉', '陆明俊', '郑李一诺', '李秉修', '苗奥贺', '王博乐', '张靖熙', '李金粒', '于柯',
+                '户有', '王铭浩', '王若印', '梁轩瑜', '王成', '胡凯彬', '谷栋鑫', '朱明远', '刘家和', '侯波宇',
+                '李新禹', '卢温轩', '孟子斐', '李润田', '康家宁', '徐铭杨', '王意奥', '刘佩浩', '胡弋卓', '程凯勃',
+                '王煦龙', '练潇阳', '王启舟', '贾德卿', '张滨鹏', '郭锦冉', '王世凯', '王许骏', '陈梓涵', '张家乐',
+                '焦之栋', '董俊甬', '王舒旭', '李若彤', '郭璥赛'
+            ],
+            "影像班": [
+                '侯子豪', '张珂意', '王天赐', '张一鸣', '董子衡', '朱皓威', '徐佳豪', '王子铭', '翁新贺', '夏彪鑫',
+                '刘昱行', '王吉祥', '王涵', '段君睿', '丁子翔', '常俊浩', '孙奥鹏', '黄启轩', '李金恒', '凌依晨',
+                '史家贺', '窦一铭', '景易哲', '张佳鑫', '王泽凡', '李威翰', '张文博', '张益珂', '王孜涵', '张桓语',
+                '张铭钊', '秦皓轩', '冯怡皓', '齐乾任', '张祚赫', '秦一诺', '朱登奥', '廖辉', '周雨贤', '晁启尊',
+                '吕小龙', '曾永坤', '张思怡', '张嘉怡', '陈婕惜媛', '王金岚', '邢梦珂', '韦若轩', '吴一', '李雅雯',
+                '李沂燃', '徐熙媛', '石优琦', '谢涵冰', '李析甜', '吴沛沛', '张欣怡', '刘邵聪', '许梦瑶', '樊萌萌',
+                '李嘉怡', '李芸萱', '李家菁', '倪樱格', '曹欣', '付一彤', '谢茹冰', '陈冉冉', '王霞', '王惠玉',
+                '赵铭妍', '闫雨倩', '冯晓宁', '王楠', '梁亚腾'
+            ]
+        };
+
+        // 状态映射到中文
+        const statusMap = {
+            'present': '出勤',
+            'absent': '旷课',
+            'leave': '请假',
+            'late': '迟到',
+            'withdrawn': '退学'
+        };
+
+        // 初始化班级数据
+        function initializeClasses() {
+            for (let i = 0; i < allClassNames.length; i++) {
+                const className = allClassNames[i];
+                const students = [];
+                
+                // 检查是否有预定义的学生名单
+                if (predefinedStudents[className]) {
+                    // 使用预定义名单
+                    predefinedStudents[className].forEach((name, index) => {
+                        const classNumber = className.replace(/\D/g, '');
+                        const studentId = `202${classNumber ? classNumber.padStart(2, '0') : '00'}${String(index + 1).padStart(2, '0')}`;
+                        
+                        students.push({
+                            id: studentId,
+                            name: name,
+                            status: 'present',
+                            totalScore: 0,
+                            rollcallCount: 0,
+                            lastRollcalled: null
+                        });
+                    });
+                }
+                
+                appData.classes[className] = {
+                    students: students,
+                    sessions: {
+                        '第1节课': {
+                            date: new Date().toLocaleDateString(),
+                            time: new Date().toLocaleTimeString(),
+                            attendance: students.reduce((acc, student) => {
+                                acc[student.id] = {
+                                    status: student.status,
+                                    score: 0,
+                                    scoreChanges: []
+                                };
+                                return acc;
+                            }, {})
+                        }
+                    },
+                    rollcallHistory: []
+                };
+            }
+            
+            resetRollcallPool();
+        }
+
+        // 重置点名池
+        function resetRollcallPool() {
+            const currentClassData = appData.classes[appData.currentClass];
+            if (currentClassData && currentClassData.students) {
+                const sessionData = currentClassData.sessions[appData.currentSession];
+                
+                appData.rollcallPool = currentClassData.students
+                    .filter(student => {
+                        const attendance = sessionData.attendance[student.id];
+                        return attendance ? attendance.status === 'present' : student.status === 'present';
+                    })
+                    .map(student => student.id);
+                
+                updateRollcallPoolStatus();
+            }
+        }
+
+        // 更新点名池状态显示
+        function updateRollcallPoolStatus() {
+            const currentClassData = appData.classes[appData.currentClass];
+            const sessionData = currentClassData.sessions[appData.currentSession];
+            
+            const totalStudents = currentClassData.students
+                .filter(student => {
+                    const attendance = sessionData.attendance[student.id];
+                    return attendance ? attendance.status === 'present' : student.status === 'present';
+                }).length;
+                
+            const remainingStudents = appData.rollcallPool.length;
+            
+            // 添加视觉状态指示器
+            let poolStatusClass = 'pool-good';
+            let statusText = '充足';
+            if (remainingStudents < totalStudents * 0.3) {
+                poolStatusClass = 'pool-danger';
+                statusText = '不足';
+            } else if (remainingStudents < totalStudents * 0.6) {
+                poolStatusClass = 'pool-warning';
+                statusText = '紧张';
+            }
+            
+            const statusElement = document.getElementById('rollcallPoolStatus');
+            statusElement.innerHTML = `点名池状态: 剩余 ${remainingStudents}/${totalStudents} 名学生可被选中 
+                <span class="pool-indicator ${poolStatusClass}">${statusText}</span>
+                <button id="resetRollcallPoolBtn" class="btn-cyber rounded px-2 py-1 text-sm">重置点名池</button>`;
+            
+            // 重新绑定重置按钮事件
+            document.getElementById('resetRollcallPoolBtn').addEventListener('click', resetRollcallPool);
+        }
+
+        // DOM 元素引用
+        const elements = {
+            nameDisplay: document.getElementById('nameDisplay'),
+            actionBtn: document.getElementById('actionBtn'),
+            addScoreBtn: document.getElementById('addScoreBtn'),
+            fileInput: document.getElementById('fileInput'),
+            scoreBoard: document.getElementById('scoreBoard'),
+            voiceToggle: document.getElementById('voiceToggle'),
+            voiceSelect: document.getElementById('voiceSelect'),
+            historyList: document.getElementById('historyList'),
+            exportButton: document.getElementById('exportButton'),
+            exportModal: document.getElementById('exportModal'),
+            closeExportModal: document.querySelector('#exportModal .close'),
+            confirmExportBtn: document.getElementById('confirmExportBtn'),
+            exportSuccessModal: document.getElementById('exportSuccessModal'),
+            closeSuccessModal: document.getElementById('closeSuccessModal'),
+            exportTypeSelect: document.getElementById('exportTypeSelect'),
+            exportSessionSelection: document.getElementById('exportSessionSelection'),
+            selectAllSessions: document.getElementById('selectAllSessions'),
+            classSelectBtn: document.getElementById('classSelectBtn'),
+            classSelectDropdown: document.getElementById('classSelectDropdown'),
+            classDropdownContent: document.getElementById('classDropdownContent'),
+            sessionSelectBtn: document.getElementById('sessionSelectBtn'),
+            sessionSelectDropdown: document.getElementById('sessionSelectDropdown'),
+            sessionDropdownContent: document.getElementById('sessionDropdownContent'),
+            createNewSessionBtn: document.getElementById('createNewSessionBtn'),
+            currentDate: document.getElementById('currentDate'),
+            currentTime: document.getElementById('currentTime'),
+            currentSession: document.getElementById('currentSession'),
+            rollcallCountSelect: document.getElementById('rollcallCountSelect'),
+            resetRollcallPoolBtn: document.getElementById('resetRollcallPoolBtn'),
+            clearHistoryBtn: document.getElementById('clearHistoryBtn'),
+            clearHistoryModal: document.getElementById('clearHistoryModal'),
+            cancelClearBtn: document.getElementById('cancelClearBtn'),
+            confirmClearBtn: document.getElementById('confirmClearBtn'),
+            homeButton: document.getElementById('homeButton')
+        };
+
+        // 开始滚动点名
+        function startRolling(count) {
+            appData.isRolling = true;
+            elements.actionBtn.innerHTML = '<i class="fas fa-stop mr-2"></i>停止';
+            elements.actionBtn.classList.add('bg-red-500');
+            elements.actionBtn.classList.remove('btn-cyber');
+            
+            const nameDisplay = document.getElementById('nameDisplay');
+            nameDisplay.classList.add('name-flash');
+
+            // 最快速度滚动（50ms间隔）
+            appData.rollInterval = setInterval(() => {
+                let displayText = '';
+                const currentClassData = appData.classes[appData.currentClass];
+                
+                if (!currentClassData || !currentClassData.students.length) {
+                    clearInterval(appData.rollInterval);
+                    return;
+                }
+                
+                // 随机显示学生姓名
+                const tempSelected = [];
+                for (let i = 0; i < count; i++) {
+                    const randomIndex = Math.floor(Math.random() * currentClassData.students.length);
+                    const student = currentClassData.students[randomIndex];
+                    tempSelected.push(student);
+                    displayText += student.name + (i < count - 1 ? '\n' : '');
+                }
+                
+                nameDisplay.textContent = displayText;
+                
+            }, 50);
+        }
+
+        // 停止滚动点名
+        function stopRolling(count) {
+            appData.isRolling = false;
+            clearInterval(appData.rollInterval);
+            
+            // 恢复按钮样式
+            elements.actionBtn.innerHTML = '<i class="fas fa-rocket mr-2"></i>开始提问';
+            elements.actionBtn.classList.remove('bg-red-500');
+            elements.actionBtn.classList.add('btn-cyber');
+            
+            // 移除动画效果
+            const nameDisplay = document.getElementById('nameDisplay');
+            nameDisplay.classList.remove('name-flash');
+            
+            // 显示最终选择结果
+            const finalSelected = selectRandomStudents(count);
+            
+            // 添加选中效果
+            nameDisplay.classList.add('selected-effect');
+            setTimeout(() => {
+                nameDisplay.classList.remove('selected-effect');
+            }, 1000);
+        }
+
+        // 随机选择学生
+        function selectRandomStudents(count = 1) {
+            const currentClassData = appData.classes[appData.currentClass];
+            if (!currentClassData || !currentClassData.students || currentClassData.students.length === 0) {
+                elements.nameDisplay.textContent = '请先添加学生';
+                return [];
+            }
+            
+            // 检查点名池是否有足够学生
+            if (appData.rollcallPool.length === 0) {
+                resetRollcallPool();
+                if (appData.rollcallPool.length === 0) {
+                    elements.nameDisplay.textContent = '没有可点名的学生';
+                    speak('没有可点名的学生');
+                    return [];
+                }
+            }
+            
+            const selectedStudents = [];
+            
+            // 随机选择指定数量的学生（不超过点名池人数）
+            const selectCount = Math.min(count, appData.rollcallPool.length);
+            
+            for (let i = 0; i < selectCount; i++) {
+                const randomIndex = Math.floor(Math.random() * appData.rollcallPool.length);
+                const studentId = appData.rollcallPool[randomIndex];
+                
+                // 从点名池中移除已选中的学生
+                appData.rollcallPool.splice(randomIndex, 1);
+                
+                // 查找学生信息
+                const student = currentClassData.students.find(s => s.id === studentId);
+                if (student) {
+                    selectedStudents.push(student);
+                    
+                    // 更新点名次数
+                    student.rollcallCount++;
+                    student.lastRollcalled = new Date();
+                }
+            }
+            
+            // 记录点名历史（多人模式）
+            if (selectedStudents.length > 0) {
+                const historyEntry = {
+                    time: new Date(),
+                    session: appData.currentSession,
+                    students: selectedStudents.map(s => ({
+                        id: s.id,
+                        name: s.name
+                    }))
+                };
+                
+                currentClassData.rollcallHistory.unshift(historyEntry);
+                
+                // 限制历史记录数量
+                if (currentClassData.rollcallHistory.length > 100) {
+                    currentClassData.rollcallHistory.pop();
+                }
+            }
+            
+            // 更新点名池状态
+            updateRollcallPoolStatus();
+            
+            // 显示选中的学生
+            if (selectedStudents.length > 0) {
+                const names = selectedStudents.map(s => s.name).join('\n');
+                elements.nameDisplay.textContent = names;
+                elements.nameDisplay.classList.add('selected-effect');
+                
+                // 移除动画类，以便下次可以重新触发
+                setTimeout(() => {
+                    elements.nameDisplay.classList.remove('selected-effect');
+                }, 500);
+                
+                // 语音播报
+                if (selectedStudents.length === 1) {
+                    speak(`选中的学生是：${selectedStudents[0].name}`);
+                } else {
+                    const namesList = selectedStudents.map(s => s.name).join('，');
+                    speak(`选中的学生是：${namesList}`);
+                }
+                
+                // 更新界面
+                renderScoreBoard();
+                renderHistoryList();
+            }
+            
+            return selectedStudents;
+        }
+
+        // 初始化页面
+        function init() {
+            initializeClasses();
+            initClassDropdown();
+            initSessionDropdown();
+            updateDateTime();
+            setInterval(updateDateTime, 60000);
+            initEventListeners();
+            loadVoiceOptions();
+            renderScoreBoard();
+            updateSessionInfo();
+        }
+
+        // 初始化班级下拉菜单
+        function initClassDropdown() {
+            const classDropdownContent = elements.classDropdownContent;
+            classDropdownContent.innerHTML = '';
+
+            allClassNames.forEach(className => {
+                const a = document.createElement('a');
+                a.href = '#';
+                a.textContent = className;
+                a.className = 'dropdown-item px-4 py-2 hover:bg-gray-100 cursor-pointer';
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    appData.currentClass = className;
+                    elements.classSelectBtn.innerHTML = `${className} <i class="fas fa-chevron-down text-xs"></i>`;
+                    elements.classSelectDropdown.classList.remove('active');
+
+                    const sessions = Object.keys(appData.classes[className].sessions);
+                    if (sessions.length > 0) {
+                        appData.currentSession = sessions[0];
+                        elements.sessionSelectBtn.innerHTML = `${appData.currentSession} <i class="fas fa-chevron-down text-xs"></i>`;
+                    }
+
+                    resetRollcallPool();
+                    renderScoreBoard();
+                    updateSessionInfo();
+                    initSessionDropdown();
+                    initExportSessionSelection();
+                });
+                classDropdownContent.appendChild(a);
+            });
+        }
+
+        // 初始化节次下拉菜单
+        function initSessionDropdown() {
+            const sessionDropdownContent = elements.sessionDropdownContent;
+            sessionDropdownContent.innerHTML = '';
+
+            const currentClassData = appData.classes[appData.currentClass];
+            if (!currentClassData) return;
+
+            Object.keys(currentClassData.sessions).forEach(sessionName => {
+                const a = document.createElement('a');
+                a.href = '#';
+                a.textContent = sessionName;
+                a.className = 'dropdown-item px-4 py-2 hover:bg-gray-100 cursor-pointer';
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    appData.currentSession = sessionName;
+                    elements.sessionSelectBtn.innerHTML = `${sessionName} <i class="fas fa-chevron-down text-xs"></i>`;
+                    elements.sessionSelectDropdown.classList.remove('active');
+
+                    resetRollcallPool();
+                    renderScoreBoard();
+                    updateSessionInfo();
+                    initExportSessionSelection();
+                });
+                sessionDropdownContent.appendChild(a);
+            });
+        }
+
+        // 更新日期时间显示
+        function updateDateTime() {
+            const now = new Date();
+            elements.currentDate.textContent = now.toLocaleDateString();
+            elements.currentTime.textContent = now.toLocaleTimeString();
+            elements.currentSession.textContent = appData.currentSession;
+        }
+
+        // 更新节次信息
+        function updateSessionInfo() {
+            const currentClassData = appData.classes[appData.currentClass];
+            if (!currentClassData) return;
+
+            const sessionData = currentClassData.sessions[appData.currentSession];
+            if (!sessionData) return;
+
+            elements.currentDate.textContent = sessionData.date || new Date().toLocaleDateString();
+            elements.currentTime.textContent = sessionData.time || new Date().toLocaleTimeString();
+            elements.currentSession.textContent = appData.currentSession;
+        }
+
+        // 初始化导出节次选择
+        function initExportSessionSelection() {
+            const currentClassData = appData.classes[appData.currentClass];
+            if (!currentClassData) return;
+
+            let sessionSelectionHTML = '';
+            Object.keys(currentClassData.sessions).forEach(sessionName => {
+                sessionSelectionHTML += `
+                    <label class="session-checkbox-item">
+                        <input type="checkbox" value="${sessionName}" checked> ${sessionName}
+                    </label>
+                `;
+            });
+
+            elements.exportSessionSelection.innerHTML = sessionSelectionHTML;
+        }
+
+        // 初始化事件监听器
+        function initEventListeners() {
+            // 点名按钮
+            elements.actionBtn.addEventListener('click', () => {
+                const count = parseInt(elements.rollcallCountSelect.value) || 1;
+                if (!appData.isRolling) {
+                    startRolling(count);
+                } else {
+                    stopRolling(count);
+                }
+            });
+
+            // 加分按钮
+            elements.addScoreBtn.addEventListener('click', () => {
+                addScoreToSelectedStudent(1);
+            });
+
+            // 文件上传
+            elements.fileInput.addEventListener('change', handleFileUpload);
+
+            // 语音切换
+            elements.voiceToggle.addEventListener('click', () => {
+                appData.voiceEnabled = !appData.voiceEnabled;
+                elements.voiceToggle.innerHTML = appData.voiceEnabled 
+                    ? '<i class="fas fa-volume-up mr-2"></i>语音播报' 
+                    : '<i class="fas fa-volume-mute mr-2"></i>关闭语音';
+            });
+
+            // 语音选择
+            elements.voiceSelect.addEventListener('change', () => {
+                appData.selectedVoice = elements.voiceSelect.value;
+            });
+
+            // 导出按钮
+            elements.exportButton.addEventListener('click', () => {
+                initExportSessionSelection();
+                elements.exportModal.style.display = 'block';
+            });
+
+            // 关闭导出模态框
+            elements.closeExportModal.addEventListener('click', () => {
+                elements.exportModal.style.display = 'none';
+            });
+
+            // 确认导出
+            elements.confirmExportBtn.addEventListener('click', exportData);
+
+            // 关闭成功模态框
+            elements.closeSuccessModal.addEventListener('click', () => {
+                elements.exportSuccessModal.style.display = 'none';
+            });
+
+            // 班级下拉菜单
+            elements.classSelectBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                elements.classSelectDropdown.classList.toggle('active');
+                elements.sessionSelectDropdown.classList.remove('active');
+            });
+
+            // 节次下拉菜单
+            elements.sessionSelectBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                elements.sessionSelectDropdown.classList.toggle('active');
+                elements.classSelectDropdown.classList.remove('active');
+            });
+
+            // 点击其他地方关闭下拉菜单
+            document.addEventListener('click', () => {
+                elements.classSelectDropdown.classList.remove('active');
+                elements.sessionSelectDropdown.classList.remove('active');
+            });
+
+            // 创建新节次
+            elements.createNewSessionBtn.addEventListener('click', createNewSession);
+
+            // 全选节次
+            elements.selectAllSessions.addEventListener('change', (e) => {
+                const checkboxes = document.querySelectorAll('#exportSessionSelection input[type="checkbox"]');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = e.target.checked;
+                });
+            });
+
+            // 重置点名池按钮
+            document.getElementById('resetRollcallPoolBtn')?.addEventListener('click', resetRollcallPool);
+
+            // 清空历史记录按钮
+            elements.clearHistoryBtn.addEventListener('click', () => {
+                elements.clearHistoryModal.style.display = 'block';
+            });
+
+            // 取消清空历史记录
+            elements.cancelClearBtn.addEventListener('click', () => {
+                elements.clearHistoryModal.style.display = 'none';
+            });
+
+            // 确认清空历史记录
+            elements.confirmClearBtn.addEventListener('click', () => {
+                const currentClassData = appData.classes[appData.currentClass];
+                if (currentClassData) {
+                    currentClassData.rollcallHistory = [];
+                    renderHistoryList();
+                }
+                elements.clearHistoryModal.style.display = 'none';
+            });
+
+            // 返回主页按钮
+            elements.homeButton.addEventListener('click', () => {
+                // 这里可以添加返回主页的逻辑
+                alert('返回主页功能');
+            });
+
+            // 点击模态框外部关闭
+            window.addEventListener('click', (e) => {
+                if (e.target === elements.exportModal) {
+                    elements.exportModal.style.display = 'none';
+                }
+                if (e.target === elements.exportSuccessModal) {
+                    elements.exportSuccessModal.style.display = 'none';
+                }
+                if (e.target === elements.clearHistoryModal) {
+                    elements.clearHistoryModal.style.display = 'none';
+                }
+            });
+
+            // 关闭按钮
+            document.querySelectorAll('.close').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const modal = this.closest('.modal');
+                    if (modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // 处理文件上传
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const fileName = file.name;
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+
+            if (fileExtension === 'txt') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    const names = content.split(/[\r\n]+/).filter(name => name.trim() !== '');
+                    importStudentsFromNames(names);
+                };
+                reader.readAsText(file);
+            } else if (fileExtension === 'docx') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const arrayBuffer = e.target.result;
+                    mammoth.extractRawText({arrayBuffer: arrayBuffer})
+                        .then(function(result) {
+                            const text = result.value;
+                            const names = text.split(/[\r\n]+/).filter(name => name.trim() !== '');
+                            importStudentsFromNames(names);
+                        })
+                        .done();
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (fileExtension === 'csv') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    const results = Papa.parse(content, {header: false});
+                    const names = results.data.map(row => row[0]).filter(name => name && name.trim() !== '');
+                    importStudentsFromNames(names);
+                };
+                reader.readAsText(file);
+            } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                    let names;
+                    if (jsonData.length > 0 && typeof jsonData[0] === 'object') {
+                        const firstKey = Object.keys(jsonData[0])[0];
+                        names = jsonData.map(item => item[firstKey]).filter(name => name && name.toString().trim() !== '');
+                    } else {
+                        names = jsonData.map(item => Array.isArray(item) ? item[0] : item)
+                            .filter(name => name && name.toString().trim() !== '');
+                    }
+
+                    importStudentsFromNames(names);
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                alert('不支持的文件格式，请上传txt、docx、csv或Excel文件');
+            }
+
+            elements.fileInput.value = '';
+        }
+
+        // 从姓名列表导入学生
+        function importStudentsFromNames(names) {
+            if (names.length === 0) {
+                alert('未找到有效的学生姓名');
+                return;
+            }
+
+            const currentClassData = appData.classes[appData.currentClass];
+            if (!currentClassData) return;
+
+            let newCount = 0;
+
+            names.forEach(name => {
+                const trimmedName = name.trim();
+                if (!trimmedName) return;
+
+                const exists = currentClassData.students.some(student => 
+                    student.name.trim() === trimmedName
+                );
+
+                if (!exists) {
+                    const timestamp = new Date().getTime();
+                    const classNumber = appData.currentClass.replace(/\D/g, '');
+                    const randomNum = Math.floor(Math.random() * 1000);
+                    const studentId = `IM${classNumber}${timestamp}${randomNum}`;
+
+                    const newStudent = {
+                        id: studentId,
+                        name: trimmedName,
+                        status: 'present',
+                        totalScore: 0,
+                        rollcallCount: 0,
+                        lastRollcalled: null
+                    };
+
+                    currentClassData.students.push(newStudent);
+
+                    Object.values(currentClassData.sessions).forEach(session => {
+                        session.attendance[studentId] = {
+                            status: 'present',
+                            score: 0,
+                            scoreChanges: []
+                        };
+                    });
+
+                    appData.rollcallPool.push(studentId);
+                    newCount++;
+                }
+            });
+
+            updateRollcallPoolStatus();
+            renderScoreBoard();
+
+            speak(`成功导入${newCount}名新学生`);
+            alert(`成功导入${newCount}名新学生，已有${currentClassData.students.length}名学生`);
+        }
+
+        // 为选中的学生加分
+        function addScoreToSelectedStudent(points = 1) {
+            const currentClassData = appData.classes[appData.currentClass];
+            if (!currentClassData) return;
+
+            const sessionData = currentClassData.sessions[appData.currentSession];
+            if (!sessionData) return;
+
+            const displayedNames = elements.nameDisplay.textContent.split('\n');
+            if (displayedNames.length === 0 || displayedNames[0] === '准备就绪' || displayedNames[0] === '请先添加学生') {
+                return;
+            }
+
+            displayedNames.forEach(name => {
+                const student = currentClassData.students.find(s => s.name === name.trim());
+                if (student) {
+                    if (!sessionData.attendance[student.id]) {
+                        sessionData.attendance[student.id] = {
+                            status: student.status,
+                            score: 0,
+                            scoreChanges: []
+                        };
+                    }
+
+                    sessionData.attendance[student.id].score += points;
+                    sessionData.attendance[student.id].scoreChanges.push({
+                        points: points,
+                        time: new Date()
+                    });
+
+                    student.totalScore += points;
+
+                    speak(`${student.name}本节加分${points}分，本节总分${sessionData.attendance[student.id].score}分，累计总学分${student.totalScore}分`);
+                }
+            });
+
+            renderScoreBoard();
+        }
+
+        // 渲染学分看板
+        function renderScoreBoard() {
+            const currentClassData = appData.classes[appData.currentClass];
+            if (!currentClassData || !currentClassData.students) {
+                elements.scoreBoard.innerHTML = `
+                    <div class="text-center py-2 px-4 bg-gray-800 rounded-lg">
+                        <p class="font-medium">暂无加分记录</p>
+                        <p class="text-sm text-gray-400">请先进行加分操作</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const sessionData = currentClassData.sessions[appData.currentSession];
+            if (!sessionData) return;
+
+            const studentsWithScores = [...currentClassData.students]
+                .filter(student => {
+                    const attendance = sessionData.attendance[student.id];
+                    return attendance && attendance.score > 0;
+                })
+                .sort((a, b) => {
+                    const scoreA = sessionData.attendance[a.id].score;
+                    const scoreB = sessionData.attendance[b.id].score;
+                    return scoreB - scoreA;
+                });
+
+            if (studentsWithScores.length === 0) {
+                elements.scoreBoard.innerHTML = `
+                    <div class="text-center py-2 px-4 bg-gray-800 rounded-lg">
+                        <p class="font-medium">暂无加分记录</p>
+                        <p class="text-sm text-gray-400">请先进行加分操作</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let scoreBoardHTML = '';
+            studentsWithScores.forEach(student => {
+                const score = sessionData.attendance[student.id].score;
+
+                scoreBoardHTML += `
+                    <div class="score-stat-item">
+                        <div class="score-stat-name">${student.name}</div>
+                        <div class="score-stat-value">${score}</div>
+                        <div class="score-stat-controls">
+                            <button class="score-stat-btn decrease-score" data-id="${student.id}">
+                                <i class="fas fa-minus text-xs"></i>
+                            </button>
+                            <button class="score-stat-btn increase-score" data-id="${student.id}">
+                                <i class="fas fa-plus text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            elements.scoreBoard.innerHTML = scoreBoardHTML;
+
+            document.querySelectorAll('.increase-score').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const studentId = btn.dataset.id;
+                    const student = currentClassData.students.find(s => s.id === studentId);
+                    if (student) {
+                        if (!sessionData.attendance[studentId]) {
+                            sessionData.attendance[studentId] = {
+                                status: student.status,
+                                score: 0,
+                                scoreChanges: []
+                            };
+                        }
+
+                        sessionData.attendance[studentId].score += 1;
+                        sessionData.attendance[studentId].scoreChanges.push({
+                            points: 1,
+                            time: new Date()
+                        });
+
+                        student.totalScore += 1;
+
+                        renderScoreBoard();
+                        speak(`${student.name}加分1分，本节总分${sessionData.attendance[studentId].score}分，累计总学分${student.totalScore}分`);
+                    }
+                });
+            });
+
+            document.querySelectorAll('.decrease-score').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const studentId = btn.dataset.id;
+                    const student = currentClassData.students.find(s => s.id === studentId);
+
+                    if (student) {
+                        if (!sessionData.attendance[studentId]) {
+                            return;
+                        }
+
+                        if (sessionData.attendance[studentId].score > 0) {
+                            sessionData.attendance[studentId].score -= 1;
+                            sessionData.attendance[studentId].scoreChanges.push({
+                                points: -1,
+                                time: new Date()
+                            });
+
+                            student.totalScore -= 1;
+
+                            renderScoreBoard();
+                            speak(`${student.name}减分1分，本节总分${sessionData.attendance[studentId].score}分，累计总学分${student.totalScore}分`);
+                        }
+                    }
+                });
+            });
+        }
+
+        // 渲染点名历史
+        function renderHistoryList() {
+            const currentClassData = appData.classes[appData.currentClass];
+            if (!currentClassData || currentClassData.rollcallHistory.length === 0) {
+                elements.historyList.innerHTML = '<p class="text-slate-500 text-center">暂无点名历史</p>';
+                return;
+            }
+
+            let historyHTML = '';
+
+            const recentHistory = currentClassData.rollcallHistory.slice(0, 10);
+
+            recentHistory.forEach(entry => {
+                const timeStr = entry.time.toLocaleString();
+                const studentNames = entry.students.map(s => s.name).join(', ');
+                historyHTML += `
+                    <div class="history-card">
+                        <div class="history-header">
+                            <div class="history-student">${studentNames}</div>
+                            <div class="history-time">${timeStr}</div>
+                        </div>
+                        <div class="history-details">
+                            <div>节次: ${entry.session}</div>
+                            <div>人数: ${entry.students.length}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            elements.historyList.innerHTML = historyHTML;
+        }
+
+        // 创建新节次
+        function createNewSession() {
+            const currentClassData = appData.classes[appData.currentClass];
+            if (!currentClassData) return;
+
+            const sessionNumbers = Object.keys(currentClassData.sessions)
+                .map(session => parseInt(session.replace(/\D/g, '')))
+                .sort((a, b) => a - b);
+
+            const newSessionNumber = sessionNumbers.length > 0 ? sessionNumbers[sessionNumbers.length - 1] + 1 : 1;
+            const newSessionName = `第${newSessionNumber}节课`;
+
+            const now = new Date();
+            currentClassData.sessions[newSessionName] = {
+                date: now.toLocaleDateString(),
+                time: now.toLocaleTimeString(),
+                attendance: currentClassData.students.reduce((acc, student) => {
+                    acc[student.id] = {
+                        status: student.status,
+                        score: 0,
+                        scoreChanges: []
+                    };
+                    return acc;
+                }, {})
+            };
+
+            appData.currentSession = newSessionName;
+            elements.sessionSelectBtn.innerHTML = `${newSessionName} <i class="fas fa-chevron-down text-xs"></i>`;
+
+            initSessionDropdown();
+            initExportSessionSelection();
+            updateSessionInfo();
+            renderScoreBoard();
+            resetRollcallPool();
+
+            speak(`已创建新节次${newSessionName}`);
+        }
+
+        // 导出数据
+        function exportData() {
+            const exportType = elements.exportTypeSelect.value;
+            const selectedSessions = Array.from(
+                document.querySelectorAll('#exportSessionSelection input[type="checkbox"]:checked')
+            ).map(checkbox => checkbox.value);
+
+            if (selectedSessions.length === 0) {
+                alert('请至少选择一个节次');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const currentClassData = appData.classes[appData.currentClass];
+            const className = appData.currentClass;
+
+            if (exportType === 'scores' || exportType === 'all') {
+                const scoreData = currentClassData.students.map(student => ({
+                    '班级': className,
+                    '学号': student.id,
+                    '姓名': student.name,
+                    '累计总学分': student.totalScore,
+                    '总点名次数': student.rollcallCount
+                }));
+
+                selectedSessions.forEach(sessionName => {
+                    const sessionData = currentClassData.sessions[sessionName];
+                    scoreData.forEach(student => {
+                        student[sessionName] = sessionData.attendance[student.学号]?.score || 0;
+                    });
+                });
+
+                const ws = XLSX.utils.json_to_sheet(scoreData);
+                XLSX.utils.book_append_sheet(wb, ws, `${className}_学分数据`);
+            }
+
+            if (exportType === 'attendance' || exportType === 'all') {
+                const attendanceData = currentClassData.students.map(student => ({
+                    '班级': className,
+                    '学号': student.id,
+                    '姓名': student.name
+                }));
+
+                selectedSessions.forEach(sessionName => {
+                    const sessionData = currentClassData.sessions[sessionName];
+                    attendanceData.forEach(student => {
+                        const attendance = sessionData.attendance[student.学号] || {};
+                        const status = attendance.status || student.status;
+                        student[sessionName] = statusMap[status] || '未知';
+                    });
+                });
+
+                const ws = XLSX.utils.json_to_sheet(attendanceData);
+                XLSX.utils.book_append_sheet(wb, ws, `${className}_出勤记录`);
+            }
+
+            if (exportType === 'total_statistics' || exportType === 'all') {
+                const statsData = selectedSessions.map(sessionName => {
+                    const sessionData = currentClassData.sessions[sessionName];
+                    const statusCount = {
+                        'present': 0,
+                        'absent': 0,
+                        'leave': 0,
+                        'late': 0,
+                        'withdrawn': 0
+                    };
+
+                    let totalScore = 0;
+                    let studentWithScores = 0;
+
+                    currentClassData.students.forEach(student => {
+                        const attendance = sessionData.attendance[student.id] || {};
+                        const status = attendance.status || student.status;
+                        statusCount[status]++;
+                        
+                        if (attendance.score) {
+                            totalScore += attendance.score;
+                            studentWithScores++;
+                        }
+                    });
+
+                    const avgScore = studentWithScores > 0 
+                        ? (totalScore / studentWithScores).toFixed(1) 
+                        : 0;
+
+                    return {
+                        '班级': className,
+                        '节次': sessionName,
+                        '日期': sessionData.date,
+                        '总人数': currentClassData.students.length,
+                        '出勤': statusCount.present,
+                        '旷课': statusCount.absent,
+                        '请假': statusCount.leave,
+                        '迟到': statusCount.late,
+                        '出勤率': ((statusCount.present / currentClassData.students.length) * 100).toFixed(2) + '%',
+                        '总学分': totalScore,
+                        '平均学分': avgScore
+                    };
+                });
+
+                const ws = XLSX.utils.json_to_sheet(statsData);
+                XLSX.utils.book_append_sheet(wb, ws, `${className}_汇总数据`);
+            }
+
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+            const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '');
+            const fileName = `${className}_${exportType}_${dateStr}_${timeStr}.xlsx`;
+
+            XLSX.writeFile(wb, fileName);
+
+            elements.exportModal.style.display = 'none';
+            elements.exportSuccessModal.style.display = 'block';
+        }
+
+        // 加载语音选项
+        function loadVoiceOptions() {
+            const voices = [
+                { name: '默认女声', lang: 'zh-CN' },
+                { name: '默认男声', lang: 'zh-CN' },
+                { name: '英语女声', lang: 'en-US' }
+            ];
+
+            let voiceHTML = '';
+            voices.forEach((voice, index) => {
+                voiceHTML += `<option value="${index}">${voice.name} (${voice.lang})</option>`;
+            });
+
+            elements.voiceSelect.innerHTML = voiceHTML;
+            appData.selectedVoice = 0;
+        }
+
+        // 语音播报
+        function speak(text) {
+            if (!appData.voiceEnabled) return;
+
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 0.9;
+                
+                if (appData.selectedVoice !== null && speechSynthesis.getVoices().length > 0) {
+                    const voices = speechSynthesis.getVoices();
+                    utterance.voice = voices[appData.selectedVoice % voices.length];
+                }
+                
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
